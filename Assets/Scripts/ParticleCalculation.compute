@@ -1,0 +1,104 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel UpdateParticles
+#pragma kernel UpdateGrid
+
+struct Particle
+{
+    float3 position;
+    float3 velocity;
+    float3 color;
+};
+
+
+RWStructuredBuffer<Particle> particles;
+RWStructuredBuffer<uint2> cellparticleindices;
+
+
+float deltaTime;
+float speed;
+float radius;
+float cellDim;
+float3 box;
+
+float3 BoundToBox(float3 pos)
+{
+    [branch] if(pos.x > box.x)
+    {
+       pos.x -= box.x;
+    }
+    [branch] if(pos.x < 0.0)
+    {
+        pos.x += box.x;
+    }
+    [branch] if(pos.y > box.y)
+    {
+        pos.y -= box.y;
+    }
+    [branch] if(pos.y < 0.0)
+    {
+        pos.y += box.y;
+    }
+    [branch] if(pos.z > box.z)
+    {
+        pos.z -= box.z;
+    }
+    [branch] if(pos.z < 0.0)
+    {
+        pos.z += box.z;
+    }
+
+    return pos;
+}
+
+uint CalcGridCell(uint pID)
+{
+    float3 pos = particles[pID].position;
+    // max x, min y, min z corresponds to cell {0, 0, 0} of index 0
+    uint3 cellPos = {(uint)(box.x - pos.x) / cellDim, (box.y + pos.y) / cellDim, (uint)(box.z + pos.z) / cellDim};
+    uint cID = ((cellPos.x * 2*box.x) + (cellPos.y * 4*box.x*box.z / cellDim) + (cellPos.z)) / cellDim ;
+
+    return cID;
+}
+
+// Use this function to compute the velocities of neighbours
+float3 ComputeNeighbourVelocities(uint pID)
+{
+    uint cell = CalcGridCell(pID);
+    float3 temp = {0, 0, 0};
+    return temp;
+}
+
+[numthreads(128,1,1)]
+void UpdateParticles (uint3 id : SV_DispatchThreadID)
+{
+    uint pID = id.x;
+
+
+    //Updated Particle Velocities
+        //Set particle velocities to normalised sum of neighbour velocities
+    //particles[id.x].velocity = ComputeNeighbourVelocities(id.x);
+    
+    //Updated Particle Positions
+    particles[id.x].position += particles[id.x].velocity * deltaTime;
+
+    //Keep particles in a box - teleport from one side to the other when crossing boundary
+    particles[id.x].position = BoundToBox(particles[id.x].position);
+
+    // Set particle colours
+    particles[id.x].color = float3(0,0.5f,1);
+}
+
+[numthreads(128,1,1)]
+void UpdateGrid (uint3 id : SV_DispatchThreadID)
+{
+    uint pID = id.x;    
+    uint cell = CalcGridCell(pID);
+
+    cellparticleindices[pID].x = pID;
+    cellparticleindices[pID].y = cell;
+}
+
+
+
+
+
