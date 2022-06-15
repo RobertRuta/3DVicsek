@@ -14,6 +14,7 @@ public class ParticleController : MonoBehaviour
     public Vector3 box = new Vector3(1, 1, 1);
 
     private float cellDim;
+    private Vector3Int gridDim;
 
     private const int c_groupSize = 128;
     private int m_updateParticlesKernel;
@@ -47,53 +48,37 @@ public class ParticleController : MonoBehaviour
 
     #endregion
 
+
     void InitParticles(Particle[] particles, ComputeBuffer pBuffer)
     {
-
-    }
-
-
-    #region setup
-
-    void Start()
-    {
-        // Find compute kernel
-        m_updateParticlesKernel = ParticleCalculation.FindKernel("UpdateParticles");
-        m_buildGridIndicesKernel = ParticleCalculation.FindKernel("UpdateGrid");
-
-        // Create particle buffer
-        m_particlesBuffer = new ComputeBuffer(numParticles, c_particleStride);
-        // Create quad buffer
-        m_quadPoints = new ComputeBuffer(6, c_quadStride);
-        // Create index buffer
-        m_indicesBuffer = new ComputeBuffer(numParticles, 32);
-
-
-        // Initialise particles in memory and set initial positions and velocities
-        Particle[] particles = new Particle[numParticles];        
         for (int i = 0; i < numParticles; i++)
         {
             particles[i].position = new Vector3(Random.Range(0.0f, box.x), Random.Range(0.0f, box.y), Random.Range(0.0f, box.z));
             particles[i].velocity = new Vector3(Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f)).normalized * speed;
         }
-            // Send this data to GPU buffer
-        m_particlesBuffer.SetData(particles);
+            // Pack this data into buffer on CPU
+        pBuffer.SetData(particles);
+    }
 
-        InitParticles()
+    void RecalcBox()
+    {
+        // Recalculate box dimensions
+        box.x = Mathf.Round(box.x / cellDim) * cellDim;
+        box.y = Mathf.Round(box.y / cellDim) * cellDim;
+        box.z = Mathf.Round(box.z / cellDim) * cellDim;
+    }
 
+    void CalcGrid()
+    {
+        RecalcBox();
+        // How many cells along x, y, z axes
+        gridDim = new Vector3Int((int) (box.x / cellDim) , (int) (box.y / cellDim), (int) (box.z / cellDim));
+    }
 
-        // Initialise grid
-        cellDim = radius;
-            // Recalculate box dimensions
-        box.x = Round(box.x / cellDim) * cellDim;
-        box.y = Round(box.y / cellDim) * cellDim;
-        box.z = Round(box.z / cellDim) * cellDim;
-            // How many cells along x, y, z axes
-        gridDim = new Vector3Int(box.x , box.y, box.z) * (1 / cellDim);
-
-
+    void InitQuads(ComputeBuffer quadBuffer)
+    {
         // Initialise quadpoints buffer (individual particles)
-        m_quadPoints.SetData(new[] {
+        quadBuffer.SetData(new[] {
             new Vector3(-0.25f, 0.25f),
             new Vector3(0.25f, 0.25f),
             new Vector3(0.25f, -0.25f),
@@ -101,11 +86,46 @@ public class ParticleController : MonoBehaviour
             new Vector3(-0.25f, -0.25f),
             new Vector3(-0.25f, 0.25f),
         });
+    }
+
+
+    #region setup
+
+    void Start()
+    {
+        // Find kernel and set kernel indices
+        m_updateParticlesKernel = ParticleCalculation.FindKernel("UpdateParticles");
+        m_buildGridIndicesKernel = ParticleCalculation.FindKernel("UpdateGrid");
+
+        
+        // Create buffers
+            // Create particle buffer
+        m_particlesBuffer = new ComputeBuffer(numParticles, c_particleStride);
+            // Create quad buffer
+        m_quadPoints = new ComputeBuffer(6, c_quadStride);
+            // Create index buffer
+        m_indicesBuffer = new ComputeBuffer(numParticles, 32);
+
+
+        // Initialise particles in memory and set initial positions and velocities
+        Particle[] particles = new Particle[numParticles];
+        InitParticles(particles, m_particlesBuffer);
+
+
+        // Initialise grid
+        cellDim = radius;
+        CalcGrid();
+
+
+        // Initialise quad points
+        InitQuads(m_quadPoints);
 
 
         // Set radius and cellDim variables in computer shader
         ParticleCalculation.SetFloat("radius", radius);
         ParticleCalculation.SetFloat("cellDim", Mathf.CeilToInt(radius));
+        ParticleCalculation.SetFloats("box", new[] {box.x, box.y, box.z});
+        
     }
 
     #endregion
@@ -115,19 +135,35 @@ public class ParticleController : MonoBehaviour
 
     void Update()
     {
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particlesBuffer);
+        // Updated compute shader variables
         ParticleCalculation.SetFloat("deltaTime", Time.deltaTime);
         ParticleCalculation.SetFloat("speed", speed);
+        
+        // Recalculate grid on box rescale
+        CalcGrid();
+            // Send new box dimensions to GPU
         ParticleCalculation.SetFloats("box", new[] {box.x, box.y, box.z});
 
+        // Prepare to run GPU code
         int numGroups = Mathf.CeilToInt((float)numParticles / c_groupSize);
+
+        // Dispatch particle update code on GPU
+            // Update GPU buffer with CPU buffer ?? Other way round?
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particlesBuffer);
+            // Run code
         ParticleCalculation.Dispatch(m_updateParticlesKernel, numGroups, 1, 1);
 
+        // Dispatch grid update code on GPU
+            // Update GPU buffer with CPU buffer ?? Other way round?
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellparticleindices", m_indicesBuffer);
+            // Update GPU buffer with CPU buffer ?? Other way round?
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particlesBuffer);
+            // Run code
         ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
 
-  
+
+        #region debugging
+        
         temp_indices = new Vector2Int[numParticles];
         m_indicesBuffer.GetData(temp_indices);
 
@@ -140,7 +176,10 @@ public class ParticleController : MonoBehaviour
             {
                 max = temp_indices[i].y;
             }
+            
         }
+        
+        #endregion
 
             
 
