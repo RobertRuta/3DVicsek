@@ -49,46 +49,6 @@ public class ParticleController : MonoBehaviour
     #endregion
 
 
-    void InitParticles(Particle[] particles, ComputeBuffer pBuffer)
-    {
-        for (int i = 0; i < numParticles; i++)
-        {
-            particles[i].position = new Vector3(Random.Range(0.0f, box.x), Random.Range(0.0f, box.y), Random.Range(0.0f, box.z));
-            particles[i].velocity = new Vector3(Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f)).normalized * speed;
-        }
-            // Pack this data into buffer on CPU
-        pBuffer.SetData(particles);
-    }
-
-    void RecalcBox()
-    {
-        // Recalculate box dimensions
-        box.x = Mathf.Round(box.x / cellDim) * cellDim;
-        box.y = Mathf.Round(box.y / cellDim) * cellDim;
-        box.z = Mathf.Round(box.z / cellDim) * cellDim;
-    }
-
-    void CalcGrid()
-    {
-        RecalcBox();
-        // How many cells along x, y, z axes
-        gridDim = new Vector3Int((int) (box.x / cellDim) , (int) (box.y / cellDim), (int) (box.z / cellDim));
-    }
-
-    void InitQuads(ComputeBuffer quadBuffer)
-    {
-        // Initialise quadpoints buffer (individual particles)
-        quadBuffer.SetData(new[] {
-            new Vector3(-0.25f, 0.25f),
-            new Vector3(0.25f, 0.25f),
-            new Vector3(0.25f, -0.25f),
-            new Vector3(0.25f, -0.25f),
-            new Vector3(-0.25f, -0.25f),
-            new Vector3(-0.25f, 0.25f),
-        });
-    }
-
-
     #region setup
 
     void Start()
@@ -178,12 +138,10 @@ public class ParticleController : MonoBehaviour
             }
             
         }
+        print("max: " + max);
         
         #endregion
 
-            
-
-        print("max: " + max);
     }
 
     #endregion
@@ -210,4 +168,49 @@ public class ParticleController : MonoBehaviour
         m_indicesBuffer.Dispose();
     }
     #endregion
+
+    
+    #region HelperFunctions
+
+    void InitParticles(Particle[] particles, ComputeBuffer pBuffer)
+    {
+        for (int i = 0; i < numParticles; i++)
+        {
+            particles[i].position = new Vector3(Random.Range(0.0f, box.x), Random.Range(0.0f, box.y), Random.Range(0.0f, box.z));
+            particles[i].velocity = new Vector3(Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f)).normalized * speed;
+        }
+            // Pack this data into buffer on CPU
+        pBuffer.SetData(particles);
+    }
+
+    void RecalcBox()
+    {
+        // Recalculate box dimensions
+        box.x = Mathf.Round(box.x / cellDim) * cellDim;
+        box.y = Mathf.Round(box.y / cellDim) * cellDim;
+        box.z = Mathf.Round(box.z / cellDim) * cellDim;
+    }
+
+    void CalcGrid()
+    {
+        RecalcBox();
+        // How many cells along x, y, z axes
+        gridDim = new Vector3Int((int) (box.x / cellDim) , (int) (box.y / cellDim), (int) (box.z / cellDim));
+    }
+
+    void InitQuads(ComputeBuffer quadBuffer)
+    {
+        // Initialise quadpoints buffer (individual particles)
+        quadBuffer.SetData(new[] {
+            new Vector3(-0.25f, 0.25f),
+            new Vector3(0.25f, 0.25f),
+            new Vector3(0.25f, -0.25f),
+            new Vector3(0.25f, -0.25f),
+            new Vector3(-0.25f, -0.25f),
+            new Vector3(-0.25f, 0.25f),
+        });
+    }
+
+    #endregion
+
 }
