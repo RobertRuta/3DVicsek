@@ -118,5 +118,6 @@ void UpdateGrid (uint3 id : SV_DispatchThreadID)
 void SortIndices (uint3 id : SV_DispatchThreadID)
 {
     uint ID = id.x;
-    
+    // Figure out a way to sort cellparticleindicesbuffer... and change that ugly ass name
+
 }
