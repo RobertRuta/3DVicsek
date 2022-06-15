@@ -19,7 +19,10 @@ float speed;
 float radius;
 float cellDim;
 float3 box;
+uint3 gridDims;
 
+
+// Binds particles to box. If particle leaves box it is teleported to other side.
 float3 BoundToBox(float3 pos)
 {
     [branch] if(pos.x > box.x)
@@ -50,23 +53,34 @@ float3 BoundToBox(float3 pos)
     return pos;
 }
 
-uint CalcGridCell(uint pID)
+uint3 CalcGridCoords(float3 pos)
 {
-    float3 pos = particles[pID].position;
-    // max x, min y, min z corresponds to cell {0, 0, 0} of index 0
-    uint3 cellPos = {(uint)(box.x - pos.x) / cellDim, (box.y + pos.y) / cellDim, (uint)(box.z + pos.z) / cellDim};
-    uint cID = ((cellPos.x * 2*box.x) + (cellPos.y * 4*box.x*box.z / cellDim) + (cellPos.z)) / cellDim ;
+    // cell {0, 0, 0} is found at coordinate origin and has index 0
+    uint cellX = (uint) (pos.x / cellDim);
+    uint cellY = (uint) (pos.y / cellDim);
+    uint cellZ = (uint) (pos.z / cellDim);
+    uint3 cellXYZ = {cellX, cellY, cellZ};
 
-    return cID;
+    return cellXYZ;
+}
+
+// Computes cell id given particle position
+uint CalcCellID(float3 pos)
+{
+    uint3 cellPos = CalcGridCoords(pos);
+    uint cellID = cellPos.x + cellPos.y*gridDims.x + cellPos.z*gridDims.x*gridDims.y;
+
+    return cellID;
 }
 
 // Use this function to compute the velocities of neighbours
 float3 ComputeNeighbourVelocities(uint pID)
 {
-    uint cell = CalcGridCell(pID);
+    uint cell = CalcCellID(pID);
     float3 temp = {0, 0, 0};
     return temp;
 }
+
 
 [numthreads(128,1,1)]
 void UpdateParticles (uint3 id : SV_DispatchThreadID)
@@ -88,17 +102,21 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
     particles[id.x].color = float3(0,0.5f,1);
 }
 
+
 [numthreads(128,1,1)]
 void UpdateGrid (uint3 id : SV_DispatchThreadID)
 {
     uint pID = id.x;    
-    uint cell = CalcGridCell(pID);
+    uint cell = CalcCellID(pID);
 
     cellparticleindices[pID].x = pID;
     cellparticleindices[pID].y = cell;
 }
 
 
-
-
-
+[numthreads(128,1,1)]
+void SortIndices (uint3 id : SV_DispatchThreadID)
+{
+    uint ID = id.x;
+    
+}

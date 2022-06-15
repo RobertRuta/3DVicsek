@@ -14,7 +14,7 @@ public class ParticleController : MonoBehaviour
     public Vector3 box = new Vector3(1, 1, 1);
 
     private float cellDim;
-    private Vector3Int gridDim;
+    private Vector3Int gridDims;
 
     private const int c_groupSize = 128;
     private int m_updateParticlesKernel;
@@ -103,6 +103,7 @@ public class ParticleController : MonoBehaviour
         CalcGrid();
             // Send new box dimensions to GPU
         ParticleCalculation.SetFloats("box", new[] {box.x, box.y, box.z});
+        ParticleCalculation.SetInts("gridDims", new[] {gridDims.x, gridDims.y, gridDims.z});
 
         // Prepare to run GPU code
         int numGroups = Mathf.CeilToInt((float)numParticles / c_groupSize);
@@ -195,7 +196,7 @@ public class ParticleController : MonoBehaviour
     {
         RecalcBox();
         // How many cells along x, y, z axes
-        gridDim = new Vector3Int((int) (box.x / cellDim) , (int) (box.y / cellDim), (int) (box.z / cellDim));
+        gridDims = new Vector3Int((int) (box.x / cellDim) , (int) (box.y / cellDim), (int) (box.z / cellDim));
     }
 
     void InitQuads(ComputeBuffer quadBuffer)
