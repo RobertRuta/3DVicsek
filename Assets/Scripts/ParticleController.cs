@@ -100,6 +100,7 @@ public class ParticleController : MonoBehaviour
         // Prepare to run GPU code
         numGroups = Mathf.CeilToInt((float)numParticles / c_groupSize);
 
+        /*
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keyBuffer);
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_valueBuffer);
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particlesBuffer);
@@ -123,8 +124,6 @@ public class ParticleController : MonoBehaviour
         print("Sorting somehow...");
         print("");
 
-        /*
-        */
         using (Sorter sorter = new Sorter(SortShader))
         {
             // values and keys have to be separate compute buffers
@@ -139,6 +138,7 @@ public class ParticleController : MonoBehaviour
             print("particle " + i + ": " + temp_keys[i] + " | " + temp_values[temp_keys[i]] + "    pos = " + temp_particles[temp_keys[i]].position);
             //print(temp_values[i]);
         }
+        */
 
     }
 
@@ -180,15 +180,26 @@ public class ParticleController : MonoBehaviour
         using (Sorter sorter = new Sorter(SortShader))
         {
             // values and keys have to be separate compute buffers
-            sorter.Sort(m_valueBuffer, m_keyBuffer);
+            sorter.Sort(m_valueBuffer, m_keyBuffer, true);
         }
 
         #region debugging
+        
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keyBuffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_valueBuffer);
         
         int[] temp_values = new int[numParticles];
         m_valueBuffer.GetData(temp_values);
         int[] temp_keys = new int[numParticles];
         m_keyBuffer.GetData(temp_keys);
+        Particle[] temp_particles= new Particle[numParticles];
+        m_particlesBuffer.GetData(temp_particles);
+
+        for (int i = 0; i < 5; i++)
+        {
+            print("particle " + i + ": " + temp_keys[i] + " | " + temp_values[temp_keys[i]] + "    pos = " + temp_particles[temp_keys[i]].position);
+            //print(temp_values[i]);
+        }
 
             /*
         for (int i = 0; i < 10; i++)
