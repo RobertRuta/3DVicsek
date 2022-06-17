@@ -8,7 +8,7 @@ public class ParticleController : MonoBehaviour
     #region variables
 
     public ComputeShader ParticleCalculation;
-    public ComputeShader SortShader;
+    //public ComputeShader SortShader;
     public Material ParticleMaterial;
     public int numParticles = 500000;
     public float speed = 4.0f;
@@ -176,7 +176,6 @@ public class ParticleController : MonoBehaviour
         ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
 
         /*
-        */
         using (Sorter sorter = new Sorter(SortShader))
         {
             // values and keys have to be separate compute buffers
@@ -211,14 +210,12 @@ public class ParticleController : MonoBehaviour
                 max = temp_indices[i].y;
             }
         }
-            */
         
         #endregion
-
+            */
     }
 
     #endregion
-
 
     #region Rendering
         void OnRenderObject()

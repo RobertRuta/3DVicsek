@@ -8,12 +8,14 @@ public class Sorter : MonoBehaviour
 {
     #region variables
 
+    public BitonicMergeSort sorter;
     public ComputeShader ParticleCalculation;
     public ComputeShader SortShader;
     private int m_buildGridIndicesKernel;
     private int m_mainKernel;
     private int m_sortKernel;
     
+    public int count = 1 << 10;
 
     #endregion
 
@@ -32,23 +34,21 @@ public class Sorter : MonoBehaviour
 
     void Start()
     {
-        BitonicMergeSort sorter;
-        var count = 1 << 10;
 
         sorter = new BitonicMergeSort(SortShader);
         m_values = new DisposableBuffer<uint>(count);
         m_keys = new DisposableBuffer<uint>(count);
 
-        ParticleCalculation.SetBuffer(m_mainKernel, "cellIDs", m_values);
+        //ParticleCalculation.SetBuffer("cellIDs", m_values.Buffer);
 
-        sorter.Init(m_keys);
-        sorter.Sort(m_keys, m_values);
+        sorter.Init(m_keys.Buffer);
+        sorter.Sort(m_keys.Buffer, m_values.Buffer);
 
         m_keys.Download();
         
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 1000; i++)
         {
-            Debug.Log(m_keys.Data[i], m_values.Data[m_keys.Data[i]]);
+            print(m_keys.Data[i] + " " + m_values.Data[m_keys.Data[i]]);
         }
     }
 
@@ -65,14 +65,14 @@ public class Sorter : MonoBehaviour
    
     void OnDestroy() 
     {
-        if (_sort != null)
-            _sort.Dispose();
+        if (sorter != null)
+            sorter.Dispose();
 
-        if (_keys != null)
-            _keys.Dispose();
+        if (m_keys != null)
+            m_keys.Dispose();
 
-        if (_values != null)
-            _values.Dispose();
+        if (m_values != null)
+            m_values.Dispose();
     }
 
 }
