@@ -12,6 +12,9 @@ struct Particle
 
 RWStructuredBuffer<Particle> particles;
 RWStructuredBuffer<uint2> cellparticleindices;
+RWStructuredBuffer<uint> particleIDs;
+RWStructuredBuffer<uint> cellIDs;
+
 
 
 float deltaTime;
@@ -107,10 +110,11 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
 void UpdateGrid (uint3 id : SV_DispatchThreadID)
 {
     uint pID = id.x;    
-    uint cell = CalcCellID(pID);
+    float3 pos = particles[pID].position;
+    uint cell = CalcCellID(pos);
 
-    cellparticleindices[pID].x = pID;
-    cellparticleindices[pID].y = cell;
+    particleIDs[pID] = pID;
+    cellIDs[pID] = cell;
 }
 
 
@@ -119,5 +123,6 @@ void SortIndices (uint3 id : SV_DispatchThreadID)
 {
     uint ID = id.x;
     // Figure out a way to sort cellparticleindicesbuffer... and change that ugly ass name
+    // This may be obsolete comment, we'll see if sorter works
 
 }

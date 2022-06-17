@@ -349,11 +349,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ParticleCalculation: {fileID: 7200000, guid: d7744f3c38e82c647a6f0cace5c52afd, type: 3}
+  SortShader: {fileID: 7200000, guid: 5571ac2ec9cc23e498e329945fdfa8e9, type: 3}
   ParticleMaterial: {fileID: 2100000, guid: aa1433dd80cb374418f1ecbd14666668, type: 2}
-  numParticles: 8250000
+  numParticles: 100000
   speed: 20
-  radius: 5
-  box: {x: 250, y: 250, z: 250}
+  radius: 10
+  box: {x: 100, y: 100, z: 100}
 --- !u!4 &1160059495
 Transform:
   m_ObjectHideFlags: 0
