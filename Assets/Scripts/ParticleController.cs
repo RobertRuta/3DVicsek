@@ -1,14 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using BufferSorter;
+using MergeSort;
 
 public class ParticleController : MonoBehaviour
 {
     #region variables
 
     public ComputeShader ParticleCalculation;
-    //public ComputeShader SortShader;
+    public ComputeShader SortShader;
     public Material ParticleMaterial;
     public int numParticles = 500000;
     public float speed = 4.0f;
@@ -21,6 +21,8 @@ public class ParticleController : MonoBehaviour
     private const int c_groupSize = 128;
     private int m_buildGridIndicesKernel;
     private int m_updateParticlesKernel;
+
+    BitonicMergeSort sorter;
     
 
     #endregion
@@ -47,8 +49,8 @@ public class ParticleController : MonoBehaviour
     private const int c_quadStride = 12;
 
     private ComputeBuffer m_indicesBuffer;
-    private ComputeBuffer m_valueBuffer;
-    private ComputeBuffer m_keyBuffer;
+    private DisposableBuffer<uint> values;
+    private DisposableBuffer<uint> keys;
     private Vector2Int[] temp_indices;
 
     private int numGroups;
@@ -60,6 +62,9 @@ public class ParticleController : MonoBehaviour
 
     void Start()
     {
+        // Initialise sorter
+        sorter = new BitonicMergeSort(SortShader);
+
         // Find kernel and set kernel indices
         m_updateParticlesKernel = ParticleCalculation.FindKernel("UpdateParticles");
         m_buildGridIndicesKernel = ParticleCalculation.FindKernel("UpdateGrid");
@@ -72,8 +77,9 @@ public class ParticleController : MonoBehaviour
         m_quadPoints = new ComputeBuffer(6, c_quadStride);
             // Create index buffer
         m_indicesBuffer = new ComputeBuffer(numParticles, 32);
-        m_valueBuffer = new ComputeBuffer(numParticles, 16);
-        m_keyBuffer = new ComputeBuffer(numParticles, 16);
+
+        keys = new DisposableBuffer<uint>(numParticles);
+        values = new DisposableBuffer<uint>(numParticles);
 
 
         // Initialise particles in memory and set initial positions and velocities
@@ -168,12 +174,28 @@ public class ParticleController : MonoBehaviour
 
         // Dispatch grid update code on GPU
             // Update GPU buffer with CPU buffer ?? Other way round?
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keyBuffer);
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_valueBuffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", keys.Buffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", values.Buffer);
             // Update GPU buffer with CPU buffer ?? Other way round?
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particlesBuffer);
             // Run code
         ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
+
+        // Run Sorter
+            // Initialise sorter
+        sorter.Init(keys.Buffer);
+        sorter.SortInt(keys.Buffer, values.Buffer);
+
+        keys.Download();
+        values.Download();
+
+        for (int i = 0; i < 20; i++)
+        {
+            print(i + ": " + "{" + keys.Data[i] + ",   " + values.Data[keys.Data[i]]);
+        }
+
+
+
 
         /*
         using (Sorter sorter = new Sorter(SortShader))
