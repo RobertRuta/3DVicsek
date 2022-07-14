@@ -128,7 +128,7 @@ void ComputeNeighbourCellBounds()
         uint cID = 0;
         uint start_end_flip = 0;
 
-        while (start_end_flip < 2)
+        while (start_end_flip < 2 && cID < numParticles)
         {
             // actual cell ID
             uint ID = cellIDs[cID];
@@ -147,9 +147,39 @@ void ComputeNeighbourCellBounds()
                 start_end_flip++;
             }
             
+            // Accounts for edge case
+            if (cID == numParticles - 1)
+            {
+                if (start_end_flip == 1)
+                    neighbourCellBounds[ncID].y = cID;
+            }
+
             cID++;
         }
     }
+}
+
+float3 ComputeAverageNeighbourVelocity(float3 pos)
+{
+    float3 sum = {0.0, 0.0, 0.0};
+
+    for (uint ncID = 0; ncID < neighbourCellCount; ncID++)
+    {
+        // Inclusive start and end IDs
+        uint startID = neighbourCellBounds[ncID].x;
+        uint endID = neighbourCellBounds[ncID].y;
+
+        for (uint ID = startID; ID <= endID; ID++)
+        {
+            pID = particleIDs[ID];
+            neighbour = particles[pID];
+            
+            if (distance(pos, neighbour.position) < radius)
+                sum += neighbour.velocity;
+        }
+    }
+
+    return sum.normalize;
 }
 
 
@@ -158,8 +188,12 @@ float3 ComputeNeighbourVelocities(float3 pos)
 {
     uint cell = CalcCellID(pos);
     ComputeNeighbourCells(cell);
-    // This is parallelizable...
+    // Compute start end indices in sorted cellID buffer
+        // This is parallelizable...
     ComputeNeighbourCellBounds();
+    // Use start end indices to find particles that are in neighbouring cells only
+        // This is parallelizable
+    float3 ave_neighbour_velocity = ComputeAverageNeighbourVelocity();
     
     
 
