@@ -12,8 +12,10 @@ struct Particle
 
 RWStructuredBuffer<Particle> particles;
 RWStructuredBuffer<uint2> cellparticleindices;
+RWStructuredBuffer<uint2> neighbourCellBounds;
 RWStructuredBuffer<uint> particleIDs;
 RWStructuredBuffer<uint> cellIDs;
+RWStructuredBuffer<uint> neighbourCellIDs;
 
 
 
@@ -23,6 +25,7 @@ float radius;
 float cellDim;
 float3 box;
 uint3 gridDims;
+uint neighbourCellCount;
 
 
 // Binds particles to box. If particle leaves box it is teleported to other side.
@@ -76,10 +79,90 @@ uint CalcCellID(float3 pos)
     return cellID;
 }
 
-// Use this function to compute the velocities of neighbours
-float3 ComputeNeighbourVelocities(uint pID)
+
+void ComputeNeighbourCells(uint cellID)
 {
-    uint cell = CalcCellID(pID);
+    // Implement the below function
+    //uint3 cellXYZ = CalcCellCoords(cellID);
+    uint3 newCellXYZ = cellXYZ;
+    uint i = 0;
+    for (int x = -1; x <= 1; x++)
+    {
+        if (newCellXYZ.x < 0)
+            x = 0;
+        if (newCellXYZ.x > box.x)
+            x = box.x - 1;
+        newCellXYZ.x += x;
+
+        for (int y = -1; y <= 1; y++)
+        {
+            if (newCellXYZ.y < 0)
+                y = 0;
+            if (newCellXYZ.y > box.y)
+                y = box.y - 1;
+            newCellXYZ.y += y; 
+
+            for (int z = -1; z <= 1; z++)
+            {
+                if (newCellXYZ.z < 0)
+                    y = 0;
+                if (newCellXYZ.z > box.z)
+                    z = box.z - 1;
+                newCellXYZ.z += z; 
+            }
+
+        }
+
+        neighbourCellIDs[i] = newCellXYZ;
+        i++;
+    }
+
+    neighbourCellCount = i;
+}
+
+void ComputeNeighbourCellBounds()
+{
+    for (uint ncID = 0; ncID < neighbourCellCount; ncID++)
+    {
+        // key value ID of particleID, cellID pair to be used to index cell sorted buffers
+        uint cID = 0;
+        uint start_end_flip = 0;
+
+        while (start_end_flip < 2)
+        {
+            // actual cell ID
+            uint ID = cellIDs[cID];
+            // the actual neighbour cell ID
+            uint nID = neighbourCellIDs[ncID]
+
+            if (ID == nID && start_end_flip == 0)
+            {
+                neighbourCellBounds.x = cID;
+                start_end_flip++;
+            }
+
+            if (ID != nID && start_end_flip == 1)
+            {
+                neighbourCellBounds[ncID].y = cID - 1;
+                start_end_flip++;
+            }
+            
+            cID++;
+        }
+    }
+}
+
+
+// Use this function to compute the velocities of neighbours
+float3 ComputeNeighbourVelocities(float3 pos)
+{
+    uint cell = CalcCellID(pos);
+    ComputeNeighbourCells(cell);
+    // This is parallelizable...
+    ComputeNeighbourCellBounds();
+    
+    
+
     float3 temp = {0, 0, 0};
     return temp;
 }
