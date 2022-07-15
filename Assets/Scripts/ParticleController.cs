@@ -48,6 +48,8 @@ public class ParticleController : MonoBehaviour
     private const int c_particleStride = 36;
     private ComputeBuffer m_quadPoints;
     private const int c_quadStride = 12;
+    private ComputeBuffer m_cellboundsBuffer;
+    private ComputeBuffer m_neighbourcellsBuffer;
 
     private ComputeBuffer m_indicesBuffer;
     private DisposableBuffer<uint> values;
@@ -74,6 +76,10 @@ public class ParticleController : MonoBehaviour
         // Create buffers
             // Create particle buffer
         m_particlesBuffer = new ComputeBuffer(numParticles, c_particleStride);
+            // Create cell boundary indices buffer
+        m_cellboundsBuffer = new ComputeBuffer(27, 8);
+            // Create cell boundary indices buffer
+        m_neighbourcellsBuffer = new ComputeBuffer(27, 4);
             // Create quad buffer
         m_quadPoints = new ComputeBuffer(6, c_quadStride);
             // Create index buffer
@@ -172,6 +178,10 @@ public class ParticleController : MonoBehaviour
         // Dispatch particle update code on GPU
             // Update GPU buffer with CPU buffer ?? Other way round?
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particlesBuffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellBounds", m_cellboundsBuffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellIDs", m_neighbourcellsBuffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "cellIDs", values.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particleIDs", keys.Buffer);
             // Run code
         ParticleCalculation.Dispatch(m_updateParticlesKernel, numGroups, 1, 1);
 
