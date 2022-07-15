@@ -18,14 +18,16 @@ RWStructuredBuffer<uint> cellIDs;
 RWStructuredBuffer<uint> neighbourCellIDs;
 
 
-
+uint numParticles;
 float deltaTime;
 float speed;
 float radius;
+float noise;
 float cellDim;
 float3 box;
 uint3 gridDims;
 uint neighbourCellCount;
+uint rng_state;
 
 
 // Binds particles to box. If particle leaves box it is teleported to other side.
@@ -59,7 +61,7 @@ float3 BoundToBox(float3 pos)
     return pos;
 }
 
-uint3 CalcGridCoords(float3 pos)
+uint3 CalcCellCoords(float3 pos)
 {
     // cell {0, 0, 0} is found at coordinate origin and has index 0
     uint cellX = (uint) (pos.x / cellDim);
@@ -73,24 +75,30 @@ uint3 CalcGridCoords(float3 pos)
 // Computes cell id given particle position
 uint CalcCellID(float3 pos)
 {
-    uint3 cellPos = CalcGridCoords(pos);
+    uint3 cellPos = CalcCellCoords(pos);
+    uint cellID = cellPos.x + cellPos.y*gridDims.x + cellPos.z*gridDims.x*gridDims.y;
+
+    return cellID;
+}
+uint CalcCellID_FromCell(uint3 cellPos)
+{
     uint cellID = cellPos.x + cellPos.y*gridDims.x + cellPos.z*gridDims.x*gridDims.y;
 
     return cellID;
 }
 
-
-void ComputeNeighbourCells(uint cellID)
+void ComputeNeighbourCells(float3 pos)
 {
     // Implement the below function
-    //uint3 cellXYZ = CalcCellCoords(cellID);
+    uint3 cellXYZ = CalcCellCoords(pos);
+
     uint3 newCellXYZ = cellXYZ;
     uint i = 0;
     for (int x = -1; x <= 1; x++)
     {
         if (newCellXYZ.x < 0)
             x = 0;
-        if (newCellXYZ.x > box.x)
+        if (newCellXYZ.x > gridDims.x)
             x = box.x - 1;
         newCellXYZ.x += x;
 
@@ -98,7 +106,7 @@ void ComputeNeighbourCells(uint cellID)
         {
             if (newCellXYZ.y < 0)
                 y = 0;
-            if (newCellXYZ.y > box.y)
+            if (newCellXYZ.y > gridDims.y)
                 y = box.y - 1;
             newCellXYZ.y += y; 
 
@@ -106,14 +114,12 @@ void ComputeNeighbourCells(uint cellID)
             {
                 if (newCellXYZ.z < 0)
                     y = 0;
-                if (newCellXYZ.z > box.z)
+                if (newCellXYZ.z > gridDims.z)
                     z = box.z - 1;
                 newCellXYZ.z += z; 
             }
-
         }
-
-        neighbourCellIDs[i] = newCellXYZ;
+        neighbourCellIDs[i] = CalcCellID_FromCell(newCellXYZ);
         i++;
     }
 
@@ -133,11 +139,11 @@ void ComputeNeighbourCellBounds()
             // actual cell ID
             uint ID = cellIDs[cID];
             // the actual neighbour cell ID
-            uint nID = neighbourCellIDs[ncID]
+            uint nID = neighbourCellIDs[ncID];
 
             if (ID == nID && start_end_flip == 0)
             {
-                neighbourCellBounds.x = cID;
+                neighbourCellBounds[ncID].x = cID;
                 start_end_flip++;
             }
 
@@ -158,7 +164,7 @@ void ComputeNeighbourCellBounds()
         }
     }
 }
-
+/*
 float3 ComputeAverageNeighbourVelocity(float3 pos)
 {
     float3 sum = {0.0, 0.0, 0.0};
@@ -181,7 +187,10 @@ float3 ComputeAverageNeighbourVelocity(float3 pos)
 
     return sum.normalize;
 }
+*/
 
+
+/*
 
 // Use this function to compute the velocities of neighbours
 float3 ComputeNeighbourVelocities(float3 pos)
@@ -192,13 +201,41 @@ float3 ComputeNeighbourVelocities(float3 pos)
         // This is parallelizable...
     ComputeNeighbourCellBounds();
     // Use start end indices to find particles that are in neighbouring cells only
-        // This is parallelizable
+        // This is parallelizable...
     float3 ave_neighbour_velocity = ComputeAverageNeighbourVelocity();
-    
-    
+    // Add noise vector to average neighbour velocity   
+    return ave_neighbour_velocity;
+}
+*/
 
-    float3 temp = {0, 0, 0};
-    return temp;
+// Nathan Reed xorshift
+uint rand_xorshift()
+{
+    // Xorshift algorithm from George Marsaglia's paper
+    rng_state ^= (rng_state << 13);
+    rng_state ^= (rng_state >> 17);
+    rng_state ^= (rng_state << 5);
+    return rng_state;
+}
+
+// Thomas Wang 
+uint wang_hash(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+}
+
+// Jarzynski and Olano
+uint rand_pcg()
+{
+    uint state = rng_state;
+    rng_state = rng_state * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
 }
 
 
@@ -210,7 +247,24 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
 
     //Updated Particle Velocities
         //Set particle velocities to normalised sum of neighbour velocities
-    //particles[id.x].velocity = ComputeNeighbourVelocities(id.x);
+    
+    // float3 vel = ComputeNeighbourVelocities(id.x);
+    
+    // rng_state = pID;
+    // uint rand_int_x = rand_xorshift();
+    // uint rand_int_y = rand_pcg();
+    // uint rand_int_z = rand_pcg();
+    // int3 rand_vec = {rand_int_x, rand_int_y, rand_int_z};
+    
+    // float3 noise_vec = (rand_vec / 4294967296.0).normalize; 
+
+    // float3 newVel = vel + noise_vec*noise;
+
+    
+
+
+
+    
     
     //Updated Particle Positions
     particles[id.x].position += particles[id.x].velocity * deltaTime;

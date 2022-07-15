@@ -13,6 +13,7 @@ public class ParticleController : MonoBehaviour
     public int numParticles = 500000;
     public float speed = 4.0f;
     public float radius = 5.0f;
+    public float noise = 0.01f;
     public Vector3 box = new Vector3(1, 1, 1);
 
     private float cellDim;
@@ -158,6 +159,8 @@ public class ParticleController : MonoBehaviour
         // Updated compute shader variables
         ParticleCalculation.SetFloat("deltaTime", Time.deltaTime);
         ParticleCalculation.SetFloat("speed", speed);
+        ParticleCalculation.SetFloat("noise", noise);
+        ParticleCalculation.SetInt("numParticles", numParticles);
         
         // Recalculate grid on box rescale
         CalcGrid();
