@@ -112,47 +112,6 @@ public class ParticleController : MonoBehaviour
         // Testing
         // Prepare to run GPU code
         numGroups = Mathf.CeilToInt((float)numParticles / c_groupSize);
-
-        /*
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keyBuffer);
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_valueBuffer);
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particlesBuffer);
-            // Run code
-        ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
-        
-        int[] temp_values = new int[numParticles];
-        m_valueBuffer.GetData(temp_values);
-        int[] temp_keys = new int[numParticles];
-        m_keyBuffer.GetData(temp_keys);
-        Particle[] temp_particles = new Particle[numParticles];
-        m_particlesBuffer.GetData(temp_particles);
-        
-        for (int i = 0; i < 5; i++)
-        {
-            print("particle " + i + ": " + temp_keys[i] + " | " + temp_values[temp_keys[i]] + "    pos = " + temp_particles[temp_keys[i]].position);
-            //print(temp_values[i]);
-        }
-
-        print("");
-        print("Sorting somehow...");
-        print("");
-
-        using (Sorter sorter = new Sorter(SortShader))
-        {
-            // values and keys have to be separate compute buffers
-            sorter.Sort(m_valueBuffer, m_keyBuffer);
-        }
-
-        m_valueBuffer.GetData(temp_values);
-        m_keyBuffer.GetData(temp_keys);
-        
-        for (int i = 0; i < 5; i++)
-        {
-            print("particle " + i + ": " + temp_keys[i] + " | " + temp_values[temp_keys[i]] + "    pos = " + temp_particles[temp_keys[i]].position);
-            //print(temp_values[i]);
-        }
-        */
-
     }
 
     #endregion
@@ -271,6 +230,10 @@ public class ParticleController : MonoBehaviour
         m_particlesBuffer.Dispose();
         m_quadPoints.Dispose();
         m_indicesBuffer.Dispose();
+        values.Dispose();
+        keys.Dispose();
+        m_cellboundsBuffer.Dispose();
+        m_neighbourcellsBuffer.Dispose();
     }
     #endregion
 

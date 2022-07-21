@@ -249,7 +249,7 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
         //Set particle velocities to normalised sum of neighbour velocities
     float3 pos = particles[pID].position;
     float3 vel = ComputeNeighbourVelocities(pos);
-    particles[pID].velocity = vel;
+    //particles[pID].velocity = vel;
     
     // rng_state = pID;
     // uint rand_int_x = rand_xorshift();
