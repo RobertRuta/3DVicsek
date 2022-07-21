@@ -16,7 +16,11 @@ public class ParticleController : MonoBehaviour
     public float noise = 0.01f;
     public Vector3 box = new Vector3(1, 1, 1);
 
+    public bool show_debug_gridDims = true;
+    public bool show_debug_cells = true;
+
     private float cellDim;
+    [SerializeField]
     private Vector3Int gridDims;
 
     private const int c_groupSize = 128;
@@ -179,11 +183,23 @@ public class ParticleController : MonoBehaviour
         m_velBuffer.GetData(temp_vels);
         m_particlesBuffer.GetData(temp_particles);
         int k = 0;
+        /*
         foreach (var particle in temp_particles)
         {
             //temp_vels[k] = particle.velocity;
             print("Velocity of particle " + k + ": " + temp_vels[k]);
             k += 1;
+        }
+        */
+
+        uint[] temp_neighbour_cells = new uint[27];
+        m_neighbourcellsBuffer.GetData(temp_neighbour_cells);
+        int j = 0;
+        foreach (var cell in temp_neighbour_cells)
+        {
+            //temp_vels[k] = particle.velocity;
+            print("neigh cell: " + j + ": " + cell);
+            j += 1;
         }
 
         /*
@@ -265,6 +281,14 @@ public class ParticleController : MonoBehaviour
         }
             // Pack this data into buffer on CPU
         pBuffer.SetData(particles);
+    }
+
+    void Debug()
+    {
+        if (show_debug_gridDims)
+        {
+            print(gridDims);
+        }
     }
 
     void RecalcBox()

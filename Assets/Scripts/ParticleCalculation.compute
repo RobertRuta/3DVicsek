@@ -91,41 +91,56 @@ uint CalcCellID_FromCell(uint3 cellPos)
 
 void ComputeNeighbourCells(float3 pos)
 {
-    // Implement the below function
-    uint3 cellXYZ = CalcCellCoords(pos);
+    uint3 homeCellXYZ = CalcCellCoords(pos);    
+    uint3 newCellXYZ = homeCellXYZ;
 
-    uint3 newCellXYZ = cellXYZ;
+    int3 start = {-1, -1, -1};
+    int3 end = {1, 1, 1};
+
+    /// Account for edge cases ///
+    /*
+    */
+    start.x = homeCellXYZ.x <= 0 ? 0 : start.x;
+    start.y = homeCellXYZ.y <= 0 ? 0 : start.y;
+    start.z = homeCellXYZ.z <= 0 ? 0 : start.z;
+    end.x = homeCellXYZ.x >= gridDims.x - 1 ? 0 : end.x;
+    end.y = homeCellXYZ.y >= gridDims.y - 1 ? 0 : end.y;
+    end.z = homeCellXYZ.z >= gridDims.z - 1 ? 0 : end.z;
+    //if (homeCellXYZ.x == 0)
+
+    /// Itterate through home and neighbour cells, compute and store IDs ///
     uint i = 0;
-    for (int x = -1; x <= 1; x++)
+
+    for (int x = start.x; x <= end.x; x++)
     {
-        if (newCellXYZ.x < 0)
-            x = 0;
-        if (newCellXYZ.x > gridDims.x)
-            x = box.x - 1;
-        newCellXYZ.x += x;
-
-        for (int y = -1; y <= 1; y++)
+        for (int y = start.y; y <= end.y; y++)
         {
-            if (newCellXYZ.y < 0)
-                y = 0;
-            if (newCellXYZ.y > gridDims.y)
-                y = box.y - 1;
-            newCellXYZ.y += y; 
-
-            for (int z = -1; z <= 1; z++)
+            for (int z = start.z; z <= end.z; z++)
             {
-                if (newCellXYZ.z < 0)
-                    y = 0;
-                if (newCellXYZ.z > gridDims.z)
-                    z = box.z - 1;
-                newCellXYZ.z += z; 
+                newCellXYZ.x += x;
+                newCellXYZ.y += y; 
+                newCellXYZ.z += z;                
+                neighbourCellIDs[i] = CalcCellID_FromCell(newCellXYZ);
+                i++;
             }
         }
-        neighbourCellIDs[i] = CalcCellID_FromCell(newCellXYZ);
-        i++;
     }
 
-    neighbourCellCount = i;
+    neighbourCellCount = i + 1;
+    /* Debuging
+    int sum = 0;
+    for (int j = 0; j < 3; j++)
+    {
+        sum += cellXYZ[i];
+        neighbourCellIDs[i] = i + 1;
+
+    }
+    for (int k = 0; k < 27; k++)
+    {
+        neighbourCellIDs[k] = sum;
+
+    }
+    */
 }
 
 void ComputeNeighbourCellBounds()
@@ -206,9 +221,12 @@ float3 ComputeNeighbourVelocities(float3 pos)
     float3 ave_neighbour_velocity = ComputeAverageNeighbourVelocity(pos);
     // Add noise vector to average neighbour velocity   
     return ave_neighbour_velocity;
+    /*
+    */
+    
+    
+    //return float3(1.0, 2.0, 3.0);
 }
-/*
-*/
 
 // Nathan Reed xorshift
 uint rand_xorshift()
