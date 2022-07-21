@@ -88,7 +88,8 @@ uint CalcCellID_FromCell(uint3 cellPos)
 
     return cellID;
 }
-
+//! sometimes getting negative values out of CalcCellID_FromCell
+//! Is the problem with the function or the input?
 void ComputeNeighbourCells(float3 pos)
 {
     uint3 homeCellXYZ = CalcCellCoords(pos);    

@@ -169,15 +169,18 @@ public class ParticleController : MonoBehaviour
         keys.Download();
         values.Download();
 
-        for (int i = 0; i < 20; i++)
-        {
-            print(i + ": " + "{" + keys.Data[i] + ",   " + values.Data[keys.Data[i]] + "}");
-        }
 
 
 
 
         #region debugging
+        // print particle Id, cell ID pairs
+        for (int i = 0; i < numParticles; i++)
+        {
+            print(i + ": " + "{" + keys.Data[i] + ",   " + values.Data[keys.Data[i]] + "}");
+        }
+
+        //
         temp_particles = new Particle[numParticles];
         Vector3[] temp_vels = new Vector3[numParticles];
         m_velBuffer.GetData(temp_vels);
