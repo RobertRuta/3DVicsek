@@ -50,6 +50,7 @@ public class ParticleController : MonoBehaviour
     private const int c_quadStride = 12;
     private ComputeBuffer m_cellboundsBuffer;
     private ComputeBuffer m_neighbourcellsBuffer;
+    private ComputeBuffer m_velBuffer;
 
     private ComputeBuffer m_indicesBuffer;
     private DisposableBuffer<uint> values;
@@ -84,6 +85,8 @@ public class ParticleController : MonoBehaviour
         m_quadPoints = new ComputeBuffer(6, c_quadStride);
             // Create index buffer
         m_indicesBuffer = new ComputeBuffer(numParticles, 32);
+            // Create index buffer
+        m_velBuffer = new ComputeBuffer(numParticles, 12);
 
         keys = new DisposableBuffer<uint>(numParticles);
         values = new DisposableBuffer<uint>(numParticles);
@@ -141,6 +144,7 @@ public class ParticleController : MonoBehaviour
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellIDs", m_neighbourcellsBuffer);
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "cellIDs", values.Buffer);
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particleIDs", keys.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "temp_vels_Buffer", m_velBuffer);
             // Run code
         ParticleCalculation.Dispatch(m_updateParticlesKernel, numGroups, 1, 1);
 
@@ -169,6 +173,19 @@ public class ParticleController : MonoBehaviour
 
 
 
+        #region debugging
+        temp_particles = new Particle[numParticles];
+        Vector3[] temp_vels = new Vector3[numParticles];
+        m_velBuffer.GetData(temp_vels);
+        m_particlesBuffer.GetData(temp_particles);
+        int k = 0;
+        foreach (var particle in temp_particles)
+        {
+            //temp_vels[k] = particle.velocity;
+            print("Velocity of particle " + k + ": " + temp_vels[k]);
+            k += 1;
+        }
+
         /*
         using (Sorter sorter = new Sorter(SortShader))
         {
@@ -176,7 +193,6 @@ public class ParticleController : MonoBehaviour
             sorter.Sort(m_valueBuffer, m_keyBuffer, true);
         }
 
-        #region debugging
         
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keyBuffer);
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_valueBuffer);
@@ -205,8 +221,8 @@ public class ParticleController : MonoBehaviour
             }
         }
         
-        #endregion
             */
+        #endregion
     }
 
     #endregion

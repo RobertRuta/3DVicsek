@@ -16,6 +16,7 @@ RWStructuredBuffer<uint2> neighbourCellBounds;
 RWStructuredBuffer<uint> particleIDs;
 RWStructuredBuffer<uint> cellIDs;
 RWStructuredBuffer<uint> neighbourCellIDs;
+RWStructuredBuffer<float3> temp_vels_Buffer;
 
 
 uint numParticles;
@@ -28,6 +29,7 @@ float3 box;
 uint3 gridDims;
 uint neighbourCellCount;
 uint rng_state;
+
 
 
 // Binds particles to box. If particle leaves box it is teleported to other side.
@@ -249,7 +251,10 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
         //Set particle velocities to normalised sum of neighbour velocities
     float3 pos = particles[pID].position;
     float3 vel = ComputeNeighbourVelocities(pos);
+    temp_vels_Buffer[pID] = vel;
     //particles[pID].velocity = vel;
+    //particles[pID].velocity = vel;
+    //particles[pID].velocity = float3(0.0,0.0,0.0);
     
     // rng_state = pID;
     // uint rand_int_x = rand_xorshift();
