@@ -15,12 +15,15 @@ public class ParticleController : MonoBehaviour
     public ComputeShader SortShader;
     public Material ParticleMaterial;
     public int numParticles = 500000;
+    public int numCells;
     public float speed = 4.0f;
     public float radius = 5.0f;
     public float noise = 0.01f;
     public Vector3 box = new Vector3(1, 1, 1);
+    public uint debug_length = 27;
 
     public bool show_debug_gridDims = true;
+    public bool show_debug_indices = true;
     public bool show_debug_cells = true;
     public bool show_debug_neighbours = true;
     public bool show_debug_particles = true;
@@ -47,6 +50,11 @@ public class ParticleController : MonoBehaviour
         public Vector3 velocity;
         public Vector3 color;
     }    
+    struct Cell
+    {
+        public uint id;
+        public uint3 position;
+    }    
         
     #endregion
 
@@ -54,18 +62,14 @@ public class ParticleController : MonoBehaviour
     #region Buffers
 
     private DisposableBuffer<Particle> m_particles;
-    private Particle[] temp_particles;
-    private const int c_particleStride = 36;
+    private DisposableBuffer<Cell> m_cells;
     private DisposableBuffer<Vector3> m_quadPoints;
-    private const int c_quadStride = 12;
     private DisposableBuffer<uint2> m_cellIndexBounds;
     private DisposableBuffer<uint> m_neighbours;
     private DisposableBuffer<float3> m_velocities;
-
     private DisposableBuffer<uint> m_indicesBuffer;
     private DisposableBuffer<uint> m_values;
     private DisposableBuffer<uint> m_keys;
-    private Vector2Int[] temp_indices;
 
     private int numGroups;
 
@@ -83,10 +87,16 @@ public class ParticleController : MonoBehaviour
         m_updateParticlesKernel = ParticleCalculation.FindKernel("UpdateParticles");
         m_buildGridIndicesKernel = ParticleCalculation.FindKernel("UpdateGrid");
 
+        // Initialise grid
+        cellDim = Mathf.CeilToInt(radius);
+        CalcGrid();
+        numCells = gridDims.x*gridDims.y*gridDims.z;
         
         // Create buffers
             // Create particle buffer
         m_particles = new DisposableBuffer<Particle>(numParticles);
+            // Create cell buffer
+        m_cells = new DisposableBuffer<Cell>(numCells);
             // Create cell boundary indices buffer
         m_cellIndexBounds = new DisposableBuffer<uint2>(27);
             // Create cell boundary indices buffer
@@ -106,9 +116,6 @@ public class ParticleController : MonoBehaviour
         InitParticles(m_particles);
 
 
-        // Initialise grid
-        cellDim = radius;
-        CalcGrid();
 
 
         // Initialise quad points
@@ -117,7 +124,7 @@ public class ParticleController : MonoBehaviour
 
         // Set radius and cellDim variables in computer shader
         ParticleCalculation.SetFloat("radius", radius);
-        ParticleCalculation.SetFloat("cellDim", Mathf.CeilToInt(radius));
+        ParticleCalculation.SetFloat("cellDim", cellDim);
         ParticleCalculation.SetFloats("box", new[] {box.x, box.y, box.z});
 
 
@@ -162,6 +169,7 @@ public class ParticleController : MonoBehaviour
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keys.Buffer);
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_values.Buffer);
             // Update GPU buffer with CPU buffer ?? Other way round?
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cells", m_cells.Buffer);
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particles.Buffer);
             // Run code
         ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
@@ -174,7 +182,7 @@ public class ParticleController : MonoBehaviour
         m_keys.Download();
         m_values.Download();
 
-        Debug(10);
+        Debug(debug_length);
     }
 
     #endregion
@@ -250,13 +258,24 @@ public class ParticleController : MonoBehaviour
             }
         }
 
-        if (show_debug_cells)
+        if (show_debug_indices)
         {
             print("----------Particle Cell Debug----------");
             print("Listing first " + length + " particle, cell pairs");
             for (int i = 0; i < length; i++)
             {
                 print(i + ": " + "{" + m_keys.Data[i] + ",   " + m_values.Data[m_keys.Data[i]] + "}");
+            }
+        }
+
+        m_cells.Download();     
+        if (show_debug_cells)
+        {
+            print("----------Cell Debug----------");
+            print("Listing first " + length + " Cells");
+            for (int i = 0; i < length; i++)
+            {
+                print(i + ": " + "{" + m_cells.Data[i].id + ",   " + m_cells.Data[i].position + "}");
             }
         }
     }

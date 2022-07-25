@@ -8,9 +8,15 @@ struct Particle
     float3 velocity;
     float3 color;
 };
+struct Cell
+{
+    uint id;
+    uint3 position;
+};
 
 
 RWStructuredBuffer<Particle> particles;
+RWStructuredBuffer<Cell> cells;
 RWStructuredBuffer<uint2> cellparticleindices;
 RWStructuredBuffer<uint2> neighbourCellBounds;
 RWStructuredBuffer<uint> particleIDs;
@@ -92,21 +98,21 @@ uint CalcCellID_FromCell(uint3 cellPos)
 //! Is the problem with the function or the input?
 void ComputeNeighbourCells(float3 pos)
 {
-    uint3 homeCellXYZ = CalcCellCoords(pos);    
+    //uint3 homeCellXYZ = CalcCellCoords(pos);   
+    uint3 homeCellXYZ = {0,0,0};   
     uint3 newCellXYZ = homeCellXYZ;
 
     int3 start = {-1, -1, -1};
     int3 end = {1, 1, 1};
 
     /// Account for edge cases ///
-    /*
     start.x = homeCellXYZ.x <= 0 ? 0 : start.x;
     start.y = homeCellXYZ.y <= 0 ? 0 : start.y;
     start.z = homeCellXYZ.z <= 0 ? 0 : start.z;
     end.x = homeCellXYZ.x >= gridDims.x - 1 ? 0 : end.x;
     end.y = homeCellXYZ.y >= gridDims.y - 1 ? 0 : end.y;
     end.z = homeCellXYZ.z >= gridDims.z - 1 ? 0 : end.z;
-    */
+    /*
     if (homeCellXYZ.x <= 0)
         start.x = 0;
     if (homeCellXYZ.y <= 0)
@@ -119,17 +125,22 @@ void ComputeNeighbourCells(float3 pos)
         end.y = 0;
     if (homeCellXYZ.z >= gridDims.z - 1)
         end.z = 0;
+    */
 
     /// Itterate through home and neighbour cells, compute and store IDs ///
     uint i = 0;
     for (int x = start.x; x <= end.x; x++)
     {
+        newCellXYZ.x += x;
+
+        newCellXYZ.y = homeCellXYZ.y; 
         for (int y = start.y; y <= end.y; y++)
         {
+            newCellXYZ.y += y; 
+
+            newCellXYZ.z = homeCellXYZ.z; 
             for (int z = start.z; z <= end.z; z++)
             {
-                newCellXYZ.x += x;
-                newCellXYZ.y += y; 
                 newCellXYZ.z += z;                
                 neighbourCellIDs[i] = CalcCellID_FromCell(newCellXYZ);
                 i++;
@@ -138,17 +149,18 @@ void ComputeNeighbourCells(float3 pos)
     }
 
     neighbourCellCount = i + 1;
+    
     /* Debuging
     int sum = 0;
     for (int j = 0; j < 3; j++)
     {
-        sum += cellXYZ[i];
-        neighbourCellIDs[i] = i + 1;
+        sum += newCellXYZ[j];
+        neighbourCellIDs[j] = j + 1;
 
     }
     for (int k = 0; k < 27; k++)
     {
-        neighbourCellIDs[k] = sum;
+        neighbourCellIDs[k] = k;
 
     }
     */
@@ -222,8 +234,7 @@ float3 ComputeAverageNeighbourVelocity(float3 pos)
 // Use this function to compute the velocities of neighbours
 float3 ComputeNeighbourVelocities(float3 pos)
 {
-    uint cell = CalcCellID(pos);
-    ComputeNeighbourCells(cell);
+    ComputeNeighbourCells(pos);
     // Compute start end indices in sorted cellID buffer
         // This is parallelizable...
     ComputeNeighbourCellBounds();
@@ -317,8 +328,11 @@ void UpdateGrid (uint3 id : SV_DispatchThreadID)
 {
     uint pID = id.x;    
     float3 pos = particles[pID].position;
-    uint cell = CalcCellID(pos);
+    uint cellID = CalcCellID(pos);
 
     particleIDs[pID] = pID;
-    cellIDs[pID] = cell;
+    cellIDs[pID] = cellID;
+
+    cells[cellID].id = cellID;
+    cells[cellID].position = CalcCellCoords(pos);
 }
