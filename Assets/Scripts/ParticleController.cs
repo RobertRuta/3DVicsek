@@ -173,7 +173,7 @@ public class ParticleController : MonoBehaviour
 
 
 
-        #region debugging
+        #region debuging
         // print particle Id, cell ID pairs
         for (int i = 0; i < numParticles; i++)
         {
@@ -195,6 +195,7 @@ public class ParticleController : MonoBehaviour
         }
         */
 
+        /*
         uint[] temp_neighbour_cells = new uint[27];
         m_neighbourcellsBuffer.GetData(temp_neighbour_cells);
         int j = 0;
@@ -204,6 +205,7 @@ public class ParticleController : MonoBehaviour
             print("neigh cell: " + j + ": " + cell);
             j += 1;
         }
+        */
 
         /*
         using (Sorter sorter = new Sorter(SortShader))

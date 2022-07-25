@@ -100,18 +100,28 @@ void ComputeNeighbourCells(float3 pos)
 
     /// Account for edge cases ///
     /*
-    */
     start.x = homeCellXYZ.x <= 0 ? 0 : start.x;
     start.y = homeCellXYZ.y <= 0 ? 0 : start.y;
     start.z = homeCellXYZ.z <= 0 ? 0 : start.z;
     end.x = homeCellXYZ.x >= gridDims.x - 1 ? 0 : end.x;
     end.y = homeCellXYZ.y >= gridDims.y - 1 ? 0 : end.y;
     end.z = homeCellXYZ.z >= gridDims.z - 1 ? 0 : end.z;
-    //if (homeCellXYZ.x == 0)
+    */
+    if (homeCellXYZ.x <= 0)
+        start.x = 0;
+    if (homeCellXYZ.y <= 0)
+        start.y = 0;
+    if (homeCellXYZ.z <= 0)
+        start.z = 0;
+    if (homeCellXYZ.x >= gridDims.x - 1)
+        end.x = 0;
+    if (homeCellXYZ.y >= gridDims.y - 1)
+        end.y = 0;
+    if (homeCellXYZ.z >= gridDims.z - 1)
+        end.z = 0;
 
     /// Itterate through home and neighbour cells, compute and store IDs ///
     uint i = 0;
-
     for (int x = start.x; x <= end.x; x++)
     {
         for (int y = start.y; y <= end.y; y++)
@@ -311,14 +321,4 @@ void UpdateGrid (uint3 id : SV_DispatchThreadID)
 
     particleIDs[pID] = pID;
     cellIDs[pID] = cell;
-}
-
-
-[numthreads(128,1,1)]
-void SortIndices (uint3 id : SV_DispatchThreadID)
-{
-    uint ID = id.x;
-    // Figure out a way to sort cellparticleindicesbuffer... and change that ugly ass name
-    // This may be obsolete comment, we'll see if sorter works
-
 }
