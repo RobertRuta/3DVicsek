@@ -148,6 +148,7 @@ void ComputeNeighbourCellBounds()
             // the actual neighbour cell ID
             uint nID = neighbourCellIDs[ncID];
 
+            /*
             if (ID == nID && start_end_flip == 0)
             {
                 neighbourCellBounds[ncID].x = cID;
@@ -166,6 +167,9 @@ void ComputeNeighbourCellBounds()
                 if (start_end_flip == 1)
                     neighbourCellBounds[ncID].y = cID;
             }
+            */
+            neighbourCellBounds[ncID].x = 1;
+            neighbourCellBounds[ncID].y = 2;
 
             cID++;
         }
@@ -201,20 +205,19 @@ float3 ComputeAverageNeighbourVelocity(float3 pos)
 // Use this function to compute the velocities of neighbours
 float3 ComputeNeighbourVelocities(float3 pos)
 {
+    float3 ave_neighbour_velocity = {1.0,0.0,0.0};
     ComputeNeighbourCells(pos);
     // Compute start end indices in sorted cellID buffer
         // This is parallelizable...
-    /*
     ComputeNeighbourCellBounds();
     // Use start end indices to find particles that are in neighbouring cells only
         // This is parallelizable...
-    float3 ave_neighbour_velocity = ComputeAverageNeighbourVelocity(pos);
+    /*
+    ave_neighbour_velocity = ComputeAverageNeighbourVelocity(pos);
+    */
     // Add noise vector to average neighbour velocity   
     return ave_neighbour_velocity;
-    */
     
-    
-    return float3(1.0, 2.0, 3.0);
 }
 
 // Nathan Reed xorshift
@@ -256,9 +259,10 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
 
     //Updated Particle Velocities
         //Set particle velocities to normalised sum of neighbour velocities
-    float3 pos = particles[pID].position;
+    float3 pos = particles[0].position;
+    //float3 pos = particles[pID].position;
     float3 vel = ComputeNeighbourVelocities(pos);
-    //particles[pID].velocity = vel;
+    particles[pID].velocity = vel;
     //temp_vels_Buffer[pID] = vel;
     //particles[pID].velocity = float3(0.0,0.0,0.0);
     

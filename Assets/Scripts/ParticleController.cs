@@ -27,6 +27,7 @@ public class ParticleController : MonoBehaviour
     public bool show_debug_cells = true;
     public bool show_debug_neighbours = true;
     public bool show_debug_particles = true;
+    public bool show_debug_bounds = true;
 
     private float cellDim;
     [SerializeField]
@@ -277,6 +278,17 @@ public class ParticleController : MonoBehaviour
             for (int i = 0; i < length; i++)
             {
                 print(i + ": " + "{" + m_cells.Data[i].id + ",   " + m_cells.Data[i].position + "}");
+            }
+        }
+        
+        m_cellIndexBounds.Download();     
+        if (show_debug_bounds)
+        {
+            print("----------Cell Bounds Debug----------");
+            print("Listing first " + length + " Bounds");
+            for (int i = 0; i < length; i++)
+            {
+                print(i + ": " + "{" + m_cellIndexBounds.Data[i].x + ",   " + m_cellIndexBounds.Data[i].y + "}");
             }
         }
     }
