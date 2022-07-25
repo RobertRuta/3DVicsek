@@ -94,12 +94,10 @@ uint CalcCellID_FromCell(uint3 cellPos)
 
     return cellID;
 }
-//! sometimes getting negative values out of CalcCellID_FromCell
-//! Is the problem with the function or the input?
+//! Noticed duplicate neighbour cells
 void ComputeNeighbourCells(float3 pos)
 {
     uint3 homeCellXYZ = CalcCellCoords(pos);   
-    //uint3 homeCellXYZ = {0,0,0};   
     uint3 newCellXYZ = homeCellXYZ;
 
     int3 start = {-1, -1, -1};
