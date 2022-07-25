@@ -130,21 +130,6 @@ void ComputeNeighbourCells(float3 pos)
     }
 
     neighbourCellCount = i + 1;
-    
-    /* Debuging
-    int sum = 0;
-    for (int j = 0; j < 3; j++)
-    {
-        sum += newCellXYZ[j];
-        neighbourCellIDs[j] = j + 1;
-
-    }
-    for (int k = 0; k < 27; k++)
-    {
-        neighbourCellIDs[k] = k;
-
-    }
-    */
 }
 
 void ComputeNeighbourCellBounds()
