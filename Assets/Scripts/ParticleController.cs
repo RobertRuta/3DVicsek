@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
+using Random = UnityEngine.Random;
+using System.Runtime.InteropServices;
 using MergeSort;
 
 public class ParticleController : MonoBehaviour
@@ -47,18 +50,18 @@ public class ParticleController : MonoBehaviour
 
     #region Buffers
 
-    private ComputeBuffer m_particlesBuffer;
+    private DisposableBuffer<Particle> m_particles;
     private Particle[] temp_particles;
     private const int c_particleStride = 36;
-    private ComputeBuffer m_quadPoints;
+    private DisposableBuffer<Vector3> m_quadPoints;
     private const int c_quadStride = 12;
-    private ComputeBuffer m_cellboundsBuffer;
-    private ComputeBuffer m_neighbourcellsBuffer;
-    private ComputeBuffer m_velBuffer;
+    private DisposableBuffer<uint2> m_cellIndexBounds;
+    private DisposableBuffer<uint> m_neighbourCellIDs;
+    private DisposableBuffer<float3> m_velocities;
 
-    private ComputeBuffer m_indicesBuffer;
-    private DisposableBuffer<uint> values;
-    private DisposableBuffer<uint> keys;
+    private DisposableBuffer<uint> m_indicesBuffer;
+    private DisposableBuffer<uint> m_values;
+    private DisposableBuffer<uint> m_keys;
     private Vector2Int[] temp_indices;
 
     private int numGroups;
@@ -80,25 +83,24 @@ public class ParticleController : MonoBehaviour
         
         // Create buffers
             // Create particle buffer
-        m_particlesBuffer = new ComputeBuffer(numParticles, c_particleStride);
+        m_particles = new DisposableBuffer<Particle>(numParticles);
             // Create cell boundary indices buffer
-        m_cellboundsBuffer = new ComputeBuffer(27, 8);
+        m_cellIndexBounds = new DisposableBuffer<uint2>(27);
             // Create cell boundary indices buffer
-        m_neighbourcellsBuffer = new ComputeBuffer(27, 4);
+        m_neighbourCellIDs = new DisposableBuffer<uint>(27);
             // Create quad buffer
-        m_quadPoints = new ComputeBuffer(6, c_quadStride);
+        m_quadPoints = new DisposableBuffer<Vector3>(6);
             // Create index buffer
-        m_indicesBuffer = new ComputeBuffer(numParticles, 32);
+        m_indicesBuffer = new DisposableBuffer<uint>(numParticles);
             // Create index buffer
-        m_velBuffer = new ComputeBuffer(numParticles, 12);
+        m_velocities = new DisposableBuffer<float3>(numParticles);
 
-        keys = new DisposableBuffer<uint>(numParticles);
-        values = new DisposableBuffer<uint>(numParticles);
+        m_keys = new DisposableBuffer<uint>(numParticles);
+        m_values = new DisposableBuffer<uint>(numParticles);
 
 
-        // Initialise particles in memory and set initial positions and velocities
-        Particle[] particles = new Particle[numParticles];
-        InitParticles(particles, m_particlesBuffer);
+        // Set initial positions and velocities
+        InitParticles(m_particles);
 
 
         // Initialise grid
@@ -107,7 +109,7 @@ public class ParticleController : MonoBehaviour
 
 
         // Initialise quad points
-        InitQuads(m_quadPoints);
+        InitQuads(m_quadPoints.Buffer);
 
 
         // Set radius and cellDim variables in computer shader
@@ -143,49 +145,52 @@ public class ParticleController : MonoBehaviour
 
         // Dispatch particle update code on GPU
             // Update GPU buffer with CPU buffer ?? Other way round?
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particlesBuffer);
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellBounds", m_cellboundsBuffer);
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellIDs", m_neighbourcellsBuffer);
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "cellIDs", values.Buffer);
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particleIDs", keys.Buffer);
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "temp_vels_Buffer", m_velBuffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particles.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellBounds", m_cellIndexBounds.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellIDs", m_neighbourCellIDs.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "cellIDs", m_values.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particleIDs", m_keys.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "temp_vels_Buffer", m_velocities.Buffer);
             // Run code
         ParticleCalculation.Dispatch(m_updateParticlesKernel, numGroups, 1, 1);
 
         // Dispatch grid update code on GPU
             // Update GPU buffer with CPU buffer ?? Other way round?
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", keys.Buffer);
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", values.Buffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keys.Buffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_values.Buffer);
             // Update GPU buffer with CPU buffer ?? Other way round?
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particlesBuffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particles.Buffer);
             // Run code
         ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
 
         // Run Sorter
             // Initialise sorter
-        sorter.Init(keys.Buffer);
-        sorter.SortInt(keys.Buffer, values.Buffer);
+        sorter.Init(m_keys.Buffer);
+        sorter.SortInt(m_keys.Buffer, m_values.Buffer);
 
-        keys.Download();
-        values.Download();
+        m_keys.Download();
+        m_values.Download();
 
 
 
 
 
         #region debuging
+        /*
         // print particle Id, cell ID pairs
         for (int i = 0; i < numParticles; i++)
         {
-            print(i + ": " + "{" + keys.Data[i] + ",   " + values.Data[keys.Data[i]] + "}");
+            print(i + ": " + "{" + m_keys.Data[i] + ",   " + m_values.Data[m_keys.Data[i]] + "}");
         }
+        print("Test: " + Marshal.SizeOf(typeof(Vector2Int)));
 
         //
         temp_particles = new Particle[numParticles];
         Vector3[] temp_vels = new Vector3[numParticles];
-        m_velBuffer.GetData(temp_vels);
-        m_particlesBuffer.GetData(temp_particles);
+        m_velocities.GetData(temp_vels);
+        m_particles.GetData(temp_particles);
         int k = 0;
+        */
         /*
         foreach (var particle in temp_particles)
         {
@@ -197,7 +202,7 @@ public class ParticleController : MonoBehaviour
 
         /*
         uint[] temp_neighbour_cells = new uint[27];
-        m_neighbourcellsBuffer.GetData(temp_neighbour_cells);
+        m_neighbourCellIDs.GetData(temp_neighbour_cells);
         int j = 0;
         foreach (var cell in temp_neighbour_cells)
         {
@@ -210,7 +215,7 @@ public class ParticleController : MonoBehaviour
         /*
         using (Sorter sorter = new Sorter(SortShader))
         {
-            // values and keys have to be separate compute buffers
+            // m_values and m_keys have to be separate compute buffers
             sorter.Sort(m_valueBuffer, m_keyBuffer, true);
         }
 
@@ -218,23 +223,23 @@ public class ParticleController : MonoBehaviour
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keyBuffer);
         ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_valueBuffer);
         
-        int[] temp_values = new int[numParticles];
-        m_valueBuffer.GetData(temp_values);
-        int[] temp_keys = new int[numParticles];
-        m_keyBuffer.GetData(temp_keys);
+        int[] temp_m_values = new int[numParticles];
+        m_valueBuffer.GetData(temp_m_values);
+        int[] temp_m_keys = new int[numParticles];
+        m_keyBuffer.GetData(temp_m_keys);
         Particle[] temp_particles= new Particle[numParticles];
-        m_particlesBuffer.GetData(temp_particles);
+        m_particles.GetData(temp_particles);
 
         for (int i = 0; i < 5; i++)
         {
-            print("particle " + i + ": " + temp_keys[i] + " | " + temp_values[temp_keys[i]] + "    pos = " + temp_particles[temp_keys[i]].position);
-            //print(temp_values[i]);
+            print("particle " + i + ": " + temp_m_keys[i] + " | " + temp_m_values[temp_m_keys[i]] + "    pos = " + temp_particles[temp_m_keys[i]].position);
+            //print(temp_m_values[i]);
         }
 
             /*
         for (int i = 0; i < 10; i++)
         {
-            print(i + ": " + temp_keys[i] + " | " + temp_values[i]);
+            print(i + ": " + temp_m_keys[i] + " | " + temp_m_values[i]);
             //max = max < temp_indices[i].y ? temp_indices[i].y : max;
             if (max < temp_indices[i].y)
             {
@@ -251,8 +256,8 @@ public class ParticleController : MonoBehaviour
     #region Rendering
         void OnRenderObject()
         {
-            ParticleMaterial.SetBuffer("particles", m_particlesBuffer);
-            ParticleMaterial.SetBuffer("quadPoints", m_quadPoints);
+            ParticleMaterial.SetBuffer("particles", m_particles.Buffer);
+            ParticleMaterial.SetBuffer("quadPoints", m_quadPoints.Buffer);
 
             ParticleMaterial.SetPass(0);
 
@@ -264,28 +269,28 @@ public class ParticleController : MonoBehaviour
     #region Cleanup
     void OnDestroy()
     {
-        m_particlesBuffer.Dispose();
+        m_particles.Dispose();
         m_quadPoints.Dispose();
         m_indicesBuffer.Dispose();
-        values.Dispose();
-        keys.Dispose();
-        m_cellboundsBuffer.Dispose();
-        m_neighbourcellsBuffer.Dispose();
+        m_values.Dispose();
+        m_keys.Dispose();
+        m_cellIndexBounds.Dispose();
+        m_neighbourCellIDs.Dispose();
     }
     #endregion
 
     
     #region HelperFunctions
 
-    void InitParticles(Particle[] particles, ComputeBuffer pBuffer)
+    void InitParticles(DisposableBuffer<Particle> particles)
     {
         for (int i = 0; i < numParticles; i++)
         {
-            particles[i].position = new Vector3(Random.Range(0.0f, box.x), Random.Range(0.0f, box.y), Random.Range(0.0f, box.z));
-            particles[i].velocity = new Vector3(Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f)).normalized * speed;
+            particles.Data[i].position = new Vector3(Random.Range(0.0f, box.x), Random.Range(0.0f, box.y), Random.Range(0.0f, box.z));
+            particles.Data[i].velocity = new Vector3(Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f)).normalized * speed;
         }
             // Pack this data into buffer on CPU
-        pBuffer.SetData(particles);
+        particles.Upload();
     }
 
     void Debug()
