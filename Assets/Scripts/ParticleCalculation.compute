@@ -98,8 +98,8 @@ uint CalcCellID_FromCell(uint3 cellPos)
 //! Is the problem with the function or the input?
 void ComputeNeighbourCells(float3 pos)
 {
-    //uint3 homeCellXYZ = CalcCellCoords(pos);   
-    uint3 homeCellXYZ = {0,0,0};   
+    uint3 homeCellXYZ = CalcCellCoords(pos);   
+    //uint3 homeCellXYZ = {0,0,0};   
     uint3 newCellXYZ = homeCellXYZ;
 
     int3 start = {-1, -1, -1};
@@ -112,20 +112,6 @@ void ComputeNeighbourCells(float3 pos)
     end.x = homeCellXYZ.x >= gridDims.x - 1 ? 0 : end.x;
     end.y = homeCellXYZ.y >= gridDims.y - 1 ? 0 : end.y;
     end.z = homeCellXYZ.z >= gridDims.z - 1 ? 0 : end.z;
-    /*
-    if (homeCellXYZ.x <= 0)
-        start.x = 0;
-    if (homeCellXYZ.y <= 0)
-        start.y = 0;
-    if (homeCellXYZ.z <= 0)
-        start.z = 0;
-    if (homeCellXYZ.x >= gridDims.x - 1)
-        end.x = 0;
-    if (homeCellXYZ.y >= gridDims.y - 1)
-        end.y = 0;
-    if (homeCellXYZ.z >= gridDims.z - 1)
-        end.z = 0;
-    */
 
     /// Itterate through home and neighbour cells, compute and store IDs ///
     uint i = 0;
@@ -292,7 +278,6 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
     float3 pos = particles[pID].position;
     float3 vel = ComputeNeighbourVelocities(pos);
     temp_vels_Buffer[pID] = vel;
-    //particles[pID].velocity = vel;
     //particles[pID].velocity = vel;
     //particles[pID].velocity = float3(0.0,0.0,0.0);
     

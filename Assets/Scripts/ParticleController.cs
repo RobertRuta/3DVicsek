@@ -204,6 +204,7 @@ public class ParticleController : MonoBehaviour
     void OnDestroy()
     {
         m_particles.Dispose();
+        m_cells.Dispose();
         m_quadPoints.Dispose();
         m_indicesBuffer.Dispose();
         m_values.Dispose();
