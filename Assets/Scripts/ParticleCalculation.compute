@@ -98,8 +98,8 @@ uint CalcCellID_FromCell(uint3 cellPos)
 
 void ComputeNeighbourCells(float3 pos)
 {
-    //uint3 homeCellXYZ = CalcCellCoords(pos);   
-    uint3 homeCellXYZ = {121,397,28};   
+    uint3 homeCellXYZ = CalcCellCoords(pos);   
+    //uint3 homeCellXYZ = {121,397,28};   
     uint3 newCellXYZ = homeCellXYZ;
 
     int3 start = {-1, -1, -1};
