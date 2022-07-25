@@ -6,6 +6,7 @@ using Random = UnityEngine.Random;
 using System.Runtime.InteropServices;
 using MergeSort;
 
+
 public class ParticleController : MonoBehaviour
 {
     #region variables
@@ -21,6 +22,8 @@ public class ParticleController : MonoBehaviour
 
     public bool show_debug_gridDims = true;
     public bool show_debug_cells = true;
+    public bool show_debug_neighbours = true;
+    public bool show_debug_particles = true;
 
     private float cellDim;
     [SerializeField]
@@ -56,7 +59,7 @@ public class ParticleController : MonoBehaviour
     private DisposableBuffer<Vector3> m_quadPoints;
     private const int c_quadStride = 12;
     private DisposableBuffer<uint2> m_cellIndexBounds;
-    private DisposableBuffer<uint> m_neighbourCellIDs;
+    private DisposableBuffer<uint> m_neighbours;
     private DisposableBuffer<float3> m_velocities;
 
     private DisposableBuffer<uint> m_indicesBuffer;
@@ -87,7 +90,7 @@ public class ParticleController : MonoBehaviour
             // Create cell boundary indices buffer
         m_cellIndexBounds = new DisposableBuffer<uint2>(27);
             // Create cell boundary indices buffer
-        m_neighbourCellIDs = new DisposableBuffer<uint>(27);
+        m_neighbours = new DisposableBuffer<uint>(27);
             // Create quad buffer
         m_quadPoints = new DisposableBuffer<Vector3>(6);
             // Create index buffer
@@ -147,7 +150,7 @@ public class ParticleController : MonoBehaviour
             // Update GPU buffer with CPU buffer ?? Other way round?
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particles.Buffer);
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellBounds", m_cellIndexBounds.Buffer);
-        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellIDs", m_neighbourCellIDs.Buffer);
+        ParticleCalculation.SetBuffer(m_updateParticlesKernel, "neighbourCellIDs", m_neighbours.Buffer);
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "cellIDs", m_values.Buffer);
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particleIDs", m_keys.Buffer);
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "temp_vels_Buffer", m_velocities.Buffer);
@@ -176,6 +179,7 @@ public class ParticleController : MonoBehaviour
 
 
         #region debuging
+        Debug(10);
         /*
         // print particle Id, cell ID pairs
         for (int i = 0; i < numParticles; i++)
@@ -202,7 +206,7 @@ public class ParticleController : MonoBehaviour
 
         /*
         uint[] temp_neighbour_cells = new uint[27];
-        m_neighbourCellIDs.GetData(temp_neighbour_cells);
+        m_neighbours.GetData(temp_neighbour_cells);
         int j = 0;
         foreach (var cell in temp_neighbour_cells)
         {
@@ -275,7 +279,7 @@ public class ParticleController : MonoBehaviour
         m_values.Dispose();
         m_keys.Dispose();
         m_cellIndexBounds.Dispose();
-        m_neighbourCellIDs.Dispose();
+        m_neighbours.Dispose();
     }
     #endregion
 
@@ -293,11 +297,45 @@ public class ParticleController : MonoBehaviour
         particles.Upload();
     }
 
-    void Debug()
+    void Debug(uint length)
     {
-        if (show_debug_gridDims)
+        m_particles.Download();
+        if (show_debug_particles)
         {
-            print(gridDims);
+            print("----------Particle Debug----------");
+            print("Listing first " + length + " particles");
+
+            for (int i = 0; i < length; i++)
+            {
+                print("Particle " + i + "\n" 
+                    + "position: " + m_particles.Data[i].position + "\n"
+                    + "velocity: " + m_particles.Data[i].velocity + "\n"
+                    + "-----" + "\n");
+            }
+        }
+
+        m_neighbours.Download();
+        if (show_debug_neighbours)
+        {
+            print("----------Neighbour Debug----------");
+            print("Listing first " + length + " neighbours");
+
+            for (int i = 0; i < length; i++)
+            {
+                print("Neighbour " + i + "\n" 
+                    + "ID: " + m_neighbours.Data[i] + "\n"
+                    + "-----" + "\n");
+            }
+        }
+
+        if (show_debug_cells)
+        {
+            print("----------Particle Cell Debug----------");
+            print("Listing first " + length + " particle, cell pairs");
+            for (int i = 0; i < length; i++)
+            {
+                print(i + ": " + "{" + m_keys.Data[i] + ",   " + m_values.Data[m_keys.Data[i]] + "}");
+            }
         }
     }
 
@@ -330,5 +368,6 @@ public class ParticleController : MonoBehaviour
     }
 
     #endregion
+
 
 }
