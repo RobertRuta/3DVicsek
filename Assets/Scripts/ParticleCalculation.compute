@@ -97,7 +97,8 @@ uint CalcCellID_FromCell(uint3 cellPos)
 //! Noticed duplicate neighbour cells
 void ComputeNeighbourCells(float3 pos)
 {
-    uint3 homeCellXYZ = CalcCellCoords(pos);   
+    //uint3 homeCellXYZ = CalcCellCoords(pos);   
+    uint3 homeCellXYZ = {121,397,28};   
     uint3 newCellXYZ = homeCellXYZ;
 
     int3 start = {-1, -1, -1};
@@ -115,17 +116,13 @@ void ComputeNeighbourCells(float3 pos)
     uint i = 0;
     for (int x = start.x; x <= end.x; x++)
     {
-        newCellXYZ.x += x;
-
-        newCellXYZ.y = homeCellXYZ.y; 
+        newCellXYZ.x = homeCellXYZ + x;
         for (int y = start.y; y <= end.y; y++)
         {
-            newCellXYZ.y += y; 
-
-            newCellXYZ.z = homeCellXYZ.z; 
+            newCellXYZ.y = homeCellXYZ.y + y;
             for (int z = start.z; z <= end.z; z++)
             {
-                newCellXYZ.z += z;                
+                newCellXYZ.z = homeCellXYZ.z + z;                
                 neighbourCellIDs[i] = CalcCellID_FromCell(newCellXYZ);
                 i++;
             }
