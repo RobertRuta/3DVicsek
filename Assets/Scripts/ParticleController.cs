@@ -154,6 +154,25 @@ public class ParticleController : MonoBehaviour
         ParticleCalculation.SetInts("gridDims", new[] {gridDims.x, gridDims.y, gridDims.z});
 
 
+        // Dispatch grid update code on GPU
+            // Update GPU buffer with CPU buffer ?? Other way round?
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keys.Buffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_values.Buffer);
+            // Update GPU buffer with CPU buffer ?? Other way round?
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cells", m_cells.Buffer);
+        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particles.Buffer);
+            // Run code
+        ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
+
+
+        // Run Sorter
+            // Initialise sorter
+        sorter.Init(m_keys.Buffer);
+        sorter.SortInt(m_keys.Buffer, m_values.Buffer);
+        //m_keys.Upload();
+        //m_values.Upload();
+
+
         // Dispatch particle update code on GPU
             // Update GPU buffer with CPU buffer ?? Other way round?
         ParticleCalculation.SetBuffer(m_updateParticlesKernel, "particles", m_particles.Buffer);
@@ -165,20 +184,7 @@ public class ParticleController : MonoBehaviour
             // Run code
         ParticleCalculation.Dispatch(m_updateParticlesKernel, numGroups, 1, 1);
 
-        // Dispatch grid update code on GPU
-            // Update GPU buffer with CPU buffer ?? Other way round?
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particleIDs", m_keys.Buffer);
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cellIDs", m_values.Buffer);
-            // Update GPU buffer with CPU buffer ?? Other way round?
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "cells", m_cells.Buffer);
-        ParticleCalculation.SetBuffer(m_buildGridIndicesKernel, "particles", m_particles.Buffer);
-            // Run code
-        ParticleCalculation.Dispatch(m_buildGridIndicesKernel, numGroups, 1, 1);
 
-        // Run Sorter
-            // Initialise sorter
-        sorter.Init(m_keys.Buffer);
-        sorter.SortInt(m_keys.Buffer, m_values.Buffer);
 
         m_keys.Download();
         m_values.Download();

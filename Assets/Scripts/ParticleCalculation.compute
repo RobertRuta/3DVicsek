@@ -137,44 +137,47 @@ void ComputeNeighbourCellBounds()
 {
     for (uint ncID = 0; ncID < neighbourCellCount; ncID++)
     {
+        /*
         // key value ID of particleID, cellID pair to be used to index cell sorted buffers
-        uint cID = 0;
+        uint ID = 0;
         uint start_end_flip = 0;
+        bool inCell = false;
+        bool passed = false;
+        
+        // the actual neighbour cell ID
+        uint nID = neighbourCellIDs[ncID];
 
-        while (start_end_flip < 2 && cID < numParticles)
+        while (!passed && ID < numParticles)
         {
             // actual cell ID
-            uint ID = cellIDs[cID];
-            // the actual neighbour cell ID
-            uint nID = neighbourCellIDs[ncID];
+            uint cID = cellIDs[ID];
 
-            /*
-            if (ID == nID && start_end_flip == 0)
+            if (!inCell && cID == nID)
             {
-                neighbourCellBounds[ncID].x = cID;
-                start_end_flip++;
+                inCell = true;
+                passed = false;
+                neighbourCellBounds[ncID].x = ID;
             }
 
-            if (ID != nID && start_end_flip == 1)
+            if (inCell && cID != nID)
             {
-                neighbourCellBounds[ncID].y = cID - 1;
-                start_end_flip++;
+                inCell = false;
+                passed = true;
+                neighbourCellBounds[ncID].y = ID - 1;
             }
-            
-            // Accounts for edge case
-            if (cID == numParticles - 1)
-            {
-                if (start_end_flip == 1)
-                    neighbourCellBounds[ncID].y = cID;
-            }
-            */
-            neighbourCellBounds[ncID].x = 1;
-            neighbourCellBounds[ncID].y = 2;
-
-            cID++;
+            ID++;
         }
+
+        // Accounts for edge case
+        if (!passed)
+            neighbourCellBounds[ncID].y = cellIDs[numParticles - 1];
+        */
+        neighbourCellBounds[ncID].x = cellIDs[100*ncID];
+        neighbourCellBounds[ncID].y = 25;
     }
 }
+
+
 float3 ComputeAverageNeighbourVelocity(float3 pos)
 {
     float3 sum = {0.0, 0.0, 0.0};
@@ -197,9 +200,6 @@ float3 ComputeAverageNeighbourVelocity(float3 pos)
 
     return normalize(sum);
 }
-
-/*
-*/
 
 
 // Use this function to compute the velocities of neighbours
@@ -289,7 +289,8 @@ void UpdateParticles (uint3 id : SV_DispatchThreadID)
     particles[id.x].position = BoundToBox(particles[id.x].position);
 
     // Set particle colours
-    particles[id.x].color = float3(0,0.5f,1);
+    particles[id.x].color = float3(0,0.5,1);
+    particles[0].color = float3(1.0, 0.0, 0.0);
 }
 
 
